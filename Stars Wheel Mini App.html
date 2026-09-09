@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="tk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Stars Wheel</title>
+  <!-- Telegram Web App SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      user-select: none;
+    }
+
+    body {
+      background: #0f172a;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 16px;
+      overflow-x: hidden;
+    }
+
+    /* Top Navigation / Header */
+    .header {
+      width: 100%;
+      max-width: 400px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .balance-card {
+      background: rgba(30, 41, 59, 0.8);
+      border: 1px solid #38bdf8;
+      border-radius: 20px;
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.2);
+    }
+
+    .balance-card span {
+      font-weight: 700;
+      color: #38bdf8;
+      font-size: 16px;
+    }
+
+    .lang-select {
+      background: #1e293b;
+      color: #f8fafc;
+      border: 1px solid #475569;
+      padding: 8px 12px;
+      border-radius: 12px;
+      outline: none;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    /* Star Tier Selectors */
+    .tier-container {
+      display: flex;
+      gap: 8px;
+      width: 100%;
+      max-width: 400px;
+      overflow-x: auto;
+      padding-bottom: 10px;
+      margin-bottom: 20px;
+      scrollbar-width: none;
+    }
+
+    .tier-container::-webkit-scrollbar {
+      display: none;
+    }
+
+    .tier-btn {
+      background: #1e293b;
+      color: #94a3b8;
+      border: 1px solid #334155;
+      padding: 10px 18px;
+      border-radius: 14px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      white-space: nowrap;
+      flex: 1;
+      text-align: center;
+      transition: all 0.2s ease;
+    }
+
+    .tier-btn.active {
+      background: #2563eb;
+      color: #ffffff;
+      border-color: #60a5fa;
+      box-shadow: 0 0 10px rgba(37, 99, 235, 0.5);
+    }
+
+    /* Wheel Section */
+    .wheel-container {
+      position: relative;
+      width: 290px;
+      height: 290px;
+      margin: 10px 0 25px 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .pointer {
+      position: absolute;
+      top: -14px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 14px solid transparent;
+      border-right: 14px solid transparent;
+      border-top: 26px solid #ef4444;
+      z-index: 20;
+      filter: drop-shadow(0 3px 4px rgba(0,0,0,0.5));
+    }
+
+    .wheel {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      border: 6px solid #38bdf8;
+      position: relative;
+      overflow: hidden;
+      transition: transform 4s cubic-bezier(0.15, 0.99, 0.18, 0.99);
+      box-shadow: 0 0 20px rgba(56, 189, 248, 0.3);
+      background: conic-gradient(
+        #1e293b 0deg 36deg, #0f172a 36deg 72deg,
+        #1e293b 72deg 108deg, #0f172a 108deg 144deg,
+        #1e293b 144deg 180deg, #0f172a 180deg 216deg,
+        #1e293b 216deg 252deg, #0f172a 252deg 288deg,
+        #1e293b 288deg 324deg, #0f172a 324deg 360deg
+      );
+    }
+
+    .wheel-item {
+      position: absolute;
+      width: 50%;
+      height: 50%;
+      transform-origin: 100% 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 800;
+      text-align: center;
+      padding: 10px;
+      color: #f8fafc;
+      text-transform: uppercase;
+    }
+
+    .wheel-center {
+      position: absolute;
+      width: 45px;
+      height: 45px;
+      background: #0f172a;
+      border: 3px solid #38bdf8;
+      border-radius: 50%;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    /* Actions Panel */
+    .controls {
+      width: 100%;
+      max-width: 400px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .spin-btn {
+      width: 100%;
+      background: linear-gradient(135deg, #eab308, #ca8a04);
+      color: #000;
+      font-weight: 800;
+      font-size: 18px;
+      padding: 16px;
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(234, 179, 8, 0.4);
+      transition: transform 0.1s;
+    }
+
+    .spin-btn:active {
+      transform: scale(0.98);
+    }
+
+    .topup-btn {
+      width: 100%;
+      background: #10b981;
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 15px;
+      padding: 12px;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+
+    /* Result Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(4px);
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      z-index: 100;
+    }
+
+    .modal-content {
+      background: #1e293b;
+      padding: 24px;
+      border-radius: 20px;
+      text-align: center;
+      max-width: 320px;
+      width: 100%;
+      border: 1px solid #475569;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    }
+
+    .modal-content h3 {
+      color: #f43f5e;
+      font-size: 22px;
+      margin-bottom: 12px;
+    }
+
+    .modal-content p {
+      font-size: 14px;
+      color: #cbd5e1;
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+
+    .modal-btn {
+      width: 100%;
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      padding: 12px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 15px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header -->
+  <div class="header">
+    <div class="balance-card">
+      <span>⭐ <span id="balance">0</span> Stars</span>
+    </div>
+    <select class="lang-select" id="langSelect" onchange="changeLanguage()">
+      <option value="tk">Türkmen</option>
+      <option value="ru">Русский</option>
+      <option value="en">English</option>
+      <option value="uz">Oʻzbekcha</option>
+      <option value="tr">Türkçe</option>
+      <option value="ar">العربية</option>
+      <option value="az">Azərbaycan</option>
+      <option value="fr">Français</option>
+      <option value="kk">Қазақша</option>
+    </select>
+  </div>
+
+  <!-- Tier Selector -->
+  <div class="tier-container">
+    <button class="tier-btn active" onclick="selectTier(15, this)">15 ⭐</button>
+    <button class="tier-btn" onclick="selectTier(30, this)">30 ⭐</button>
+    <button class="tier-btn" onclick="selectTier(50, this)">50 ⭐</button>
+    <button class="tier-btn" onclick="selectTier(100, this)">100 ⭐</button>
+    <button class="tier-btn" onclick="selectTier(500, this)">500 ⭐</button>
+  </div>
+
+  <!-- Spinning Wheel -->
+  <div class="wheel-container">
+    <div class="pointer"></div>
+    <div class="wheel" id="wheel"></div>
+    <div class="wheel-center">🎯</div>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <button class="spin-btn" id="spinBtn" onclick="spinWheel()">ÇARKI AÝLA (15 ⭐)</button>
+    <button class="topup-btn" id="topupBtn" onclick="topUpBalance()">BALANS DOLDUR (Min 15 ⭐)</button>
+  </div>
+
+  <!-- Result Modal -->
+  <div class="modal" id="resultModal">
+    <div class="modal-content">
+      <h3 id="modalTitle">Boş Çykdy!</h3>
+      <p id="modalMsg">Ajaýyp sowgat gaty golaý geldi! Ýene bir gezek synanyşsaňyz hökman utarsyňyz!</p>
+      <button class="modal-btn" id="modalBtn" onclick="closeModal()">Täzeden synanyş</button>
+    </div>
+  </div>
+
+  <script>
+    // Initialize Telegram WebApp SDK
+    const tg = window.Telegram.WebApp;
+    tg.ready();
+    tg.expand();
+
+    let balance = 0;
+    let selectedTier = 15;
+    let currentRotation = 0;
+    let isSpinning = false;
+
+    // Multilingual Translations
+    const translations = {
+      tk: { spin: "ÇARKI AÝLA", topup: "BALANS DOLDUR (Min 15 ⭐)", empty: "Boş çykdy!", motivation: "Ajaýyp sowgat gaty golaý geldi! Ýene bir gezek synanyşsaňyz hökman utarsyňyz!", close: "Täzeden synanyş" },
+      ru: { spin: "КРУТИТЬ КОЛЕСО", topup: "ПОПОЛНИТЬ (Мин 15 ⭐)", empty: "Пусто!", motivation: "Вы были так близки к супер-призу! Попробуйте еще раз, вам обязательно повезет!", close: "Попробовать снова" },
+      en: { spin: "SPIN WHEEL", topup: "TOP UP (Min 15 ⭐)", empty: "Empty!", motivation: "So close to the grand prize! Try again, luck is on your side!", close: "Try Again" },
+      uz: { spin: "AYLANTIRISH", topup: "BALANS NI TOLDIRISH (Min 15 ⭐)", empty: "Bo'sh!", motivation: "Juda yaqin keldingiz! Yana bir bor urinib ko'ring, albatta yutasiz!", close: "Yana urinish" },
+      tr: { spin: "ÇARKI ÇEVİR", topup: "BAKİYE YÜKLE (Min 15 ⭐)", empty: "Boş Çıktı!", motivation: "Büyük ödüle çok yaklaştın! Bir kez daha dene, şans seninle!", close: "Tekrar Dene" },
+      ar: { spin: "إدارة العجلة", topup: "شحن الرصيد (Min 15 ⭐)", empty: "فارغ!", motivation: "كنت قريباً جداً من الجائزة الكبرى! حاول مرة أخرى!", close: "حاول مجدداً" },
+      az: { spin: "ÇARXI FIRLAT", topup: "BALANSI ARTIR (Min 15 ⭐)", empty: "Boş çıktı!", motivation: "Böyük mükafata çox yaxınlaşdınız! Bir daha cəhd edin!", close: "Yenidən cəhd et" },
+      fr: { spin: "TOURNER LA ROUE", topup: "RECHARGER (Min 15 ⭐)", empty: "Vide!", motivation: "Si près du grand prix! Réessayez, la chance est de votre côté!", close: "Réessayer" },
+      kk: { spin: "АЙНАЛДЫРУ", topup: "БАЛАНС ТОЛЫҚТЫРУ (Min 15 ⭐)", empty: "Бос!", motivation: "Үлкен сыйлыққа өте жақын қалдыңыз! Тағы бір рет басыңыз!", close: "Қайта тексеру" }
+    };
+
+    // 10 Items on the Wheel (Even positions guaranteed to hit Empty)
+    const items = [
+      "❌ BOŞ", "📱 iPhone 16", 
+      "❌ BOŞ", "🎁 500 Stars", 
+      "❌ BOŞ", "💻 Laptop", 
+      "❌ BOŞ", "🎧 AirPods", 
+      "❌ BOŞ", "⌚ Watch"
+    ];
+
+    const wheel = document.getElementById('wheel');
+
+    // Generate Wheel Sectors
+    function setupWheel() {
+      wheel.innerHTML = '';
+      items.forEach((item, index) => {
+        const el = document.createElement('div');
+        el.className = 'wheel-item';
+        const angle = index * 36;
+        el.style.transform = `rotate(${angle}deg) translate(0, -72px)`;
+        el.innerText = item;
+        wheel.appendChild(el);
+      });
+    }
+    setupWheel();
+
+    // Select Star Tier
+    function selectTier(stars, btn) {
+      if (isSpinning) return;
+      selectedTier = stars;
+      document.querySelectorAll('.tier-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      updateUI();
+    }
+
+    // Top Up Balance
+    function topUpBalance() {
+      // Send Telegram Web App Invoice payload to bot backend
+      tg.sendData(JSON.stringify({ action: "topup", amount: selectedTier }));
+      
+      // Temporary Balance Add for testing UI:
+      balance += 50;
+      document.getElementById('balance').innerText = balance;
+    }
+
+    // Spin Wheel Handler (Controlled Result Algorithm)
+    function spinWheel() {
+      if (isSpinning) return;
+      if (balance < selectedTier) {
+        alert("Balansyňyz ýetenok! Lütfen Stars ýükläň.");
+        return;
+      }
+
+      balance -= selectedTier;
+      document.getElementById('balance').innerText = balance;
+      isSpinning = true;
+
+      // Always land on Sector 0 (❌ BOŞ)
+      // Rotates minimum 5 full spins + aligns sector 0 to pointer at top
+      const fullSpins = 5 * 360;
+      const targetSectorAngle = 0; 
+      currentRotation += fullSpins + (360 - (currentRotation % 360)) + targetSectorAngle;
+
+      wheel.style.transform = `rotate(${currentRotation}deg)`;
+
+      setTimeout(() => {
+        isSpinning = false;
+        document.getElementById('resultModal').style.display = 'flex';
+      }, 4100);
+    }
+
+    function closeModal() {
+      document.getElementById('resultModal').style.display = 'none';
+    }
+
+    // Language Switcher Handler
+    function changeLanguage() {
+      updateUI();
+    }
+
+    function updateUI() {
+      const lang = document.getElementById('langSelect').value;
+      const t = translations[lang] || translations['tk'];
+      
+      document.getElementById('spinBtn').innerText = `${t.spin} (${selectedTier} ⭐)`;
+      document.getElementById('topupBtn').innerText = t.topup;
+      document.getElementById('modalTitle').innerText = t.empty;
+      document.getElementById('modalMsg').innerText = t.motivation;
+      document.getElementById('modalBtn').innerText = t.close;
+    }
+
+    updateUI();
+  </script>
+</body>
+</html>
